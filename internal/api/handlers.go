@@ -41,7 +41,7 @@ func PostMetric(store *storage.MemStorage) http.HandlerFunc {
 				}
 				store.SetGauge(metricName, value)
 				w.Header().Set("Content-Type", "text/plain")
-				w.WriteHeader(http.StatusCreated)
+				w.WriteHeader(http.StatusOK)
 			}
 		case "counter":
 			{
@@ -53,7 +53,7 @@ func PostMetric(store *storage.MemStorage) http.HandlerFunc {
 				}
 				store.SetCounter(metricName, value)
 				w.Header().Set("Content-Type", "text/plain")
-				w.WriteHeader(http.StatusCreated)
+				w.WriteHeader(http.StatusOK)
 			}
 		default:
 			{

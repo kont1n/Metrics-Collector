@@ -1,12 +1,13 @@
 package main
 
 import (
-	"Metrics-Collector/internal/api"
-	"Metrics-Collector/internal/storage"
 	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
+	"Metrics-Collector/internal/api"
+	"Metrics-Collector/internal/storage"
 )
 
 const (
