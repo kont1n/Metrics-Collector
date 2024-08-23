@@ -1,17 +1,22 @@
 package api
 
 import (
-	"Metrics-Collector/internal/storage"
-	"github.com/go-chi/chi/v5"
+	"fmt"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
+
+	"Metrics-Collector/internal/storage"
 )
 
-func PostMetric(store storage.MemStorage) http.HandlerFunc {
+func PostMetric(store *storage.MemStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metricType := chi.URLParam(r, "type")
 		metricName := chi.URLParam(r, "metric")
 		metricValue := chi.URLParam(r, "value")
+
+		fmt.Println("handler:", metricType, metricName, metricValue)
 
 		if metricName == "" {
 			w.Header().Set("Content-Type", "text/plain")

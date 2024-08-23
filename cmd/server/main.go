@@ -20,11 +20,11 @@ var (
 func main() {
 	store := storage.NewMemStorage()
 
-	r := chi.NewRouter()
-	r.Post("/update/{type}/{metric}/{value}", api.PostMetric(*store))
+	router := chi.NewRouter()
+	router.Post("/update/{type}/{metric}/{value}", api.PostMetric(store))
 
 	fmt.Println("Server started on localhost port", serverPort)
-	if err = http.ListenAndServe(fmt.Sprintf(":%d", serverPort), nil); err != nil {
+	if err = http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router); err != nil {
 		fmt.Println("Web server error:", err.Error())
 		return
 	}
