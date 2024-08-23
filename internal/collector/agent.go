@@ -109,4 +109,9 @@ func sendMetrics(url string) {
 		return
 	}
 	fmt.Println("Status code:", response.StatusCode)
+	err = response.Body.Close()
+	if err != nil {
+		fmt.Println("Error closing response body:", err.Error())
+		return
+	}
 }
