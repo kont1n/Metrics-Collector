@@ -10,6 +10,8 @@ type Storage interface {
 	SetCounter(key string, value int64)
 	GetGauge(key string) float64
 	GetCounter(key string) int64
+	GetGauges() map[string]float64
+	GetCounters() map[string]int64
 }
 
 func NewMemStorage() *MemStorage {
@@ -43,4 +45,12 @@ func (m *MemStorage) GetCounter(key string) (int64, bool) {
 	} else {
 		return value, false
 	}
+}
+
+func (m *MemStorage) GetGauges() map[string]float64 {
+	return m.gaugeMetrics
+}
+
+func (m *MemStorage) GetCounters() map[string]int64 {
+	return m.counterMetrics
 }
