@@ -119,3 +119,84 @@ func TestPostCounterMetric(t *testing.T) {
 	value, _ := store.GetCounter("test")
 	assert.Equal(t, int64(1), value)
 }
+
+func TestGetIncorrectMetricType(t *testing.T) {
+	store := storage.NewMemStorage()
+	r := httptest.NewRequest(http.MethodGet, "/value/test/test", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("type", "test")
+	rctx.URLParams.Add("metric", "test")
+
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	GetMetrics(store)(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestUnknownGaugeMetric(t *testing.T) {
+	store := storage.NewMemStorage()
+	r := httptest.NewRequest(http.MethodGet, "/value/gauge/test", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("type", "gauge")
+	rctx.URLParams.Add("metric", "test")
+
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	GetMetrics(store)(w, r)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestUnknownCounterMetric(t *testing.T) {
+	store := storage.NewMemStorage()
+	r := httptest.NewRequest(http.MethodGet, "/value/counter/test", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("type", "counter")
+	rctx.URLParams.Add("metric", "test")
+
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	GetMetrics(store)(w, r)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestGetGaugeMetrics(t *testing.T) {
+	store := storage.NewMemStorage()
+	store.SetGauge("test", 1.0)
+
+	r := httptest.NewRequest(http.MethodGet, "/value/gauge/test", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("type", "gauge")
+	rctx.URLParams.Add("metric", "test")
+
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	GetMetrics(store)(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "1.000", w.Body.String())
+}
+
+func TestGetCounterMetrics(t *testing.T) {
+	store := storage.NewMemStorage()
+	store.SetCounter("test", int64(1))
+
+	r := httptest.NewRequest(http.MethodGet, "/value/counter/test", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("type", "counter")
+	rctx.URLParams.Add("metric", "test")
+
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	GetMetrics(store)(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "1", w.Body.String())
+}

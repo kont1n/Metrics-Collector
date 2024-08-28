@@ -119,7 +119,7 @@ func IndexHandler(store *storage.MemStorage) http.HandlerFunc {
 		m := store.GetGauges()
 
 		keys := make([]string, 0, len(m))
-		for k := range store.GetGauges() {
+		for k := range m {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
