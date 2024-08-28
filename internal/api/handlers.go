@@ -63,3 +63,45 @@ func PostMetric(store *storage.MemStorage) http.HandlerFunc {
 		}
 	}
 }
+
+func GetMetrics(store *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var answer string
+		w.Header().Set("Content-Type", "text/plain")
+
+		metricType := chi.URLParam(r, "type")
+		metricName := chi.URLParam(r, "metric")
+
+		switch metricType {
+		case "gauge":
+			{
+				value, exists := store.GetGauge(metricName)
+				if !exists {
+					http.Error(w, "unknown metric", http.StatusNotFound)
+					return
+				}
+				answer = fmt.Sprintf("%f", value)
+			}
+		case "counter":
+			{
+				value, exists := store.GetCounter(metricName)
+				if !exists {
+					http.Error(w, "unknown metric", http.StatusNotFound)
+					return
+				}
+				answer = fmt.Sprintf("%d", value)
+			}
+		default:
+			{
+				w.Header().Set("Content-Type", "text/plain")
+				http.Error(w, "incorrect metric type", http.StatusBadRequest)
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(answer))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}

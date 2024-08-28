@@ -23,6 +23,8 @@ func main() {
 
 	router := chi.NewRouter()
 	router.Post("/update/{type}/{metric}/{value}", api.PostMetric(store))
+	router.Get("/value/{type}/{metric}", api.GetMetrics(store))
+	//router.Handle("/*", http.FileServer(http.Dir("web")))
 
 	fmt.Println("Server started on localhost port", serverPort)
 	if err = http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router); err != nil {

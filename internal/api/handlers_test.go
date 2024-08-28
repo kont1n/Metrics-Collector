@@ -13,7 +13,7 @@ import (
 )
 
 func TestEmptyMetricName(t *testing.T) {
-	r := httptest.NewRequest("POST", "/update/gauge/", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/gauge/", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -26,7 +26,7 @@ func TestEmptyMetricName(t *testing.T) {
 }
 
 func TestEmptyMetricValue(t *testing.T) {
-	r := httptest.NewRequest("POST", "/update/gauge/test", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/gauge/test", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -40,7 +40,7 @@ func TestEmptyMetricValue(t *testing.T) {
 }
 
 func TestIncorrectMetricType(t *testing.T) {
-	r := httptest.NewRequest("POST", "/update/test/test/1", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/test/test/1", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -55,7 +55,7 @@ func TestIncorrectMetricType(t *testing.T) {
 }
 
 func TestIncorrectMetricValue(t *testing.T) {
-	r := httptest.NewRequest("POST", "/update/gauge/test/test", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/gauge/test/test", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -70,7 +70,7 @@ func TestIncorrectMetricValue(t *testing.T) {
 }
 
 func TestIncorrectMetricValue2(t *testing.T) {
-	r := httptest.NewRequest("POST", "/update/counter/test/test", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/counter/test/test", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -86,7 +86,7 @@ func TestIncorrectMetricValue2(t *testing.T) {
 
 func TestPostGaugeMetric(t *testing.T) {
 	store := storage.NewMemStorage()
-	r := httptest.NewRequest("POST", "/update/gauge/test/1.0", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/gauge/test/1.0", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -98,12 +98,13 @@ func TestPostGaugeMetric(t *testing.T) {
 
 	PostMetric(store)(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, 1.0, store.GetGauge("test"))
+	value, _ := store.GetGauge("test")
+	assert.Equal(t, 1.0, value)
 }
 
 func TestPostCounterMetric(t *testing.T) {
 	store := storage.NewMemStorage()
-	r := httptest.NewRequest("POST", "/update/counter/test/1", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/counter/test/1", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -115,5 +116,6 @@ func TestPostCounterMetric(t *testing.T) {
 
 	PostMetric(store)(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, int64(1), store.GetCounter("test"))
+	value, _ := store.GetCounter("test")
+	assert.Equal(t, int64(1), value)
 }
