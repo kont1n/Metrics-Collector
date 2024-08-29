@@ -44,7 +44,7 @@ func ParseAgentConfig() (address string, pollInterval, reportInterval time.Durat
 	if envReportInterval != "" {
 		intervalReport, err := strconv.ParseInt(envReportInterval, 10, 64)
 		if err != nil {
-			reportInterval = time.Duration(flagReportInterval) * time.Second
+			fmt.Println("Error parsing REPORT_INTERVAL env variable")
 		}
 		reportInterval = time.Duration(intervalReport) * time.Second
 	} else {
@@ -54,7 +54,7 @@ func ParseAgentConfig() (address string, pollInterval, reportInterval time.Durat
 	if envPollInterval != "" {
 		intervalPoll, err := strconv.ParseInt(envPollInterval, 10, 64)
 		if err != nil {
-			pollInterval = time.Duration(flagPollInterval) * time.Second
+			fmt.Println("Error parsing POLL_INTERVAL env variable")
 		}
 		pollInterval = time.Duration(intervalPoll) * time.Second
 	} else {
