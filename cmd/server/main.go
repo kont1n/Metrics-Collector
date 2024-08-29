@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 
@@ -11,14 +12,22 @@ import (
 )
 
 const (
-	serverPort = 8080
+	DefaultServer = "localhost:8080"
 )
 
 var (
-	err error
+	err         error
+	flagRunAddr string
 )
 
+func parseFlags() {
+	flag.StringVar(&flagRunAddr, "a", DefaultServer, "address and port to run server")
+	flag.Parse()
+}
+
 func main() {
+	parseFlags()
+
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
@@ -26,8 +35,8 @@ func main() {
 	router.Get("/value/{type}/{metric}", api.GetMetrics(store))
 	router.Get("/", api.IndexHandler(store))
 
-	fmt.Println("Server started on localhost port", serverPort)
-	if err = http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router); err != nil {
+	fmt.Printf("Server started on %s\n", flagRunAddr)
+	if err = http.ListenAndServe(flagRunAddr, router); err != nil {
 		fmt.Println("Web server error:", err.Error())
 		return
 	}
