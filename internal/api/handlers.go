@@ -18,8 +18,6 @@ func PostMetric(store *storage.MemStorage) http.HandlerFunc {
 		metricName := chi.URLParam(r, "metric")
 		metricValue := chi.URLParam(r, "value")
 
-		fmt.Println("handler:", metricType, metricName, metricValue)
-
 		if metricName == "" {
 			w.Header().Set("Content-Type", "text/plain")
 			http.Error(w, "incorrect metric name", http.StatusNotFound)
@@ -83,7 +81,6 @@ func GetMetrics(store *storage.MemStorage) http.HandlerFunc {
 					return
 				}
 				answer = strconv.FormatFloat(value, 'f', -1, 64)
-				//answer = fmt.Sprintf("%.3f", value)
 			}
 		case "counter":
 			{

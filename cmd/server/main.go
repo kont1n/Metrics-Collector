@@ -1,32 +1,22 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"net/http"
 
+	"Metrics-Collector/internal/config"
 	"github.com/go-chi/chi/v5"
 
 	"Metrics-Collector/internal/api"
 	"Metrics-Collector/internal/storage"
 )
 
-const (
-	DefaultServer = "localhost:8080"
-)
-
 var (
-	err         error
-	flagRunAddr string
+	err error
 )
-
-func parseFlags() {
-	flag.StringVar(&flagRunAddr, "a", DefaultServer, "address and port to run server")
-	flag.Parse()
-}
 
 func main() {
-	parseFlags()
+	host := config.ParseServerConfig()
 
 	store := storage.NewMemStorage()
 
@@ -35,8 +25,8 @@ func main() {
 	router.Get("/value/{type}/{metric}", api.GetMetrics(store))
 	router.Get("/", api.IndexHandler(store))
 
-	fmt.Printf("Server started on %s\n", flagRunAddr)
-	if err = http.ListenAndServe(flagRunAddr, router); err != nil {
+	fmt.Printf("Server started on %s\n", host)
+	if err = http.ListenAndServe(host, router); err != nil {
 		fmt.Println("Web server error:", err.Error())
 		return
 	}
