@@ -82,7 +82,8 @@ func GetMetrics(store *storage.MemStorage) http.HandlerFunc {
 					http.Error(w, "unknown metric", http.StatusNotFound)
 					return
 				}
-				answer = strconv.FormatFloat(value, 'f', -1, 64)
+				//answer = strconv.FormatFloat(value, 'f', -1, 64)
+				answer = fmt.Sprintf("%.3f", value)
 			}
 		case "counter":
 			{
