@@ -32,34 +32,34 @@ func PostMetric(store *storage.MemStorage) http.HandlerFunc {
 
 		switch metricType {
 		case "gauge":
-			{
-				value, err := strconv.ParseFloat(metricValue, 64)
-				if err != nil {
-					w.Header().Set("Content-Type", "text/plain")
-					http.Error(w, "incorrect metric value", http.StatusBadRequest)
-					return
-				}
-				store.SetGauge(metricName, value)
+
+			value, err := strconv.ParseFloat(metricValue, 64)
+			if err != nil {
 				w.Header().Set("Content-Type", "text/plain")
-				w.WriteHeader(http.StatusOK)
+				http.Error(w, "incorrect metric value", http.StatusBadRequest)
+				return
 			}
+			store.SetGauge(metricName, value)
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+
 		case "counter":
-			{
-				value, err := strconv.ParseInt(metricValue, 10, 64)
-				if err != nil {
-					w.Header().Set("Content-Type", "text/plain")
-					http.Error(w, "incorrect metric value", http.StatusBadRequest)
-					return
-				}
-				store.SetCounter(metricName, value)
+
+			value, err := strconv.ParseInt(metricValue, 10, 64)
+			if err != nil {
 				w.Header().Set("Content-Type", "text/plain")
-				w.WriteHeader(http.StatusOK)
+				http.Error(w, "incorrect metric value", http.StatusBadRequest)
+				return
 			}
+			store.SetCounter(metricName, value)
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+
 		default:
-			{
-				w.Header().Set("Content-Type", "text/plain")
-				http.Error(w, "incorrect metric type", http.StatusBadRequest)
-			}
+
+			w.Header().Set("Content-Type", "text/plain")
+			http.Error(w, "incorrect metric type", http.StatusBadRequest)
+
 		}
 	}
 }
