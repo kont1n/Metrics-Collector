@@ -13,7 +13,7 @@ import (
 )
 
 func TestEmptyMetricName(t *testing.T) {
-	r := httptest.NewRequest("POST", "/update/gauge/", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/gauge/", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -26,7 +26,7 @@ func TestEmptyMetricName(t *testing.T) {
 }
 
 func TestEmptyMetricValue(t *testing.T) {
-	r := httptest.NewRequest("POST", "/update/gauge/test", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/gauge/test", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -40,7 +40,7 @@ func TestEmptyMetricValue(t *testing.T) {
 }
 
 func TestIncorrectMetricType(t *testing.T) {
-	r := httptest.NewRequest("POST", "/update/test/test/1", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/test/test/1", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -55,7 +55,7 @@ func TestIncorrectMetricType(t *testing.T) {
 }
 
 func TestIncorrectMetricValue(t *testing.T) {
-	r := httptest.NewRequest("POST", "/update/gauge/test/test", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/gauge/test/test", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -70,7 +70,7 @@ func TestIncorrectMetricValue(t *testing.T) {
 }
 
 func TestIncorrectMetricValue2(t *testing.T) {
-	r := httptest.NewRequest("POST", "/update/counter/test/test", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/counter/test/test", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -86,7 +86,7 @@ func TestIncorrectMetricValue2(t *testing.T) {
 
 func TestPostGaugeMetric(t *testing.T) {
 	store := storage.NewMemStorage()
-	r := httptest.NewRequest("POST", "/update/gauge/test/1.0", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/gauge/test/1.0", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -98,12 +98,13 @@ func TestPostGaugeMetric(t *testing.T) {
 
 	PostMetric(store)(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, 1.0, store.GetGauge("test"))
+	value, _ := store.GetGauge("test")
+	assert.Equal(t, 1.0, value)
 }
 
 func TestPostCounterMetric(t *testing.T) {
 	store := storage.NewMemStorage()
-	r := httptest.NewRequest("POST", "/update/counter/test/1", nil)
+	r := httptest.NewRequest(http.MethodPost, "/update/counter/test/1", nil)
 	w := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -115,5 +116,87 @@ func TestPostCounterMetric(t *testing.T) {
 
 	PostMetric(store)(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, int64(1), store.GetCounter("test"))
+	value, _ := store.GetCounter("test")
+	assert.Equal(t, int64(1), value)
+}
+
+func TestGetIncorrectMetricType(t *testing.T) {
+	store := storage.NewMemStorage()
+	r := httptest.NewRequest(http.MethodGet, "/value/test/test", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("type", "test")
+	rctx.URLParams.Add("metric", "test")
+
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	GetMetrics(store)(w, r)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestUnknownGaugeMetric(t *testing.T) {
+	store := storage.NewMemStorage()
+	r := httptest.NewRequest(http.MethodGet, "/value/gauge/test", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("type", "gauge")
+	rctx.URLParams.Add("metric", "test")
+
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	GetMetrics(store)(w, r)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestUnknownCounterMetric(t *testing.T) {
+	store := storage.NewMemStorage()
+	r := httptest.NewRequest(http.MethodGet, "/value/counter/test", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("type", "counter")
+	rctx.URLParams.Add("metric", "test")
+
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	GetMetrics(store)(w, r)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestGetGaugeMetrics(t *testing.T) {
+	store := storage.NewMemStorage()
+	store.SetGauge("test", 1.0)
+
+	r := httptest.NewRequest(http.MethodGet, "/value/gauge/test", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("type", "gauge")
+	rctx.URLParams.Add("metric", "test")
+
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	GetMetrics(store)(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "1.000", w.Body.String())
+}
+
+func TestGetCounterMetrics(t *testing.T) {
+	store := storage.NewMemStorage()
+	store.SetCounter("test", int64(1))
+
+	r := httptest.NewRequest(http.MethodGet, "/value/counter/test", nil)
+	w := httptest.NewRecorder()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("type", "counter")
+	rctx.URLParams.Add("metric", "test")
+
+	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
+	GetMetrics(store)(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "1", w.Body.String())
 }
