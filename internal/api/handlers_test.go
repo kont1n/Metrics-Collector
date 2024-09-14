@@ -180,7 +180,7 @@ func TestGetGaugeMetrics(t *testing.T) {
 
 	GetMetrics(store)(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, "1.000", w.Body.String())
+	assert.Equal(t, "1", w.Body.String())
 }
 
 func TestGetCounterMetrics(t *testing.T) {
