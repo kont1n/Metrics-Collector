@@ -8,6 +8,8 @@ type MemStorage struct {
 type Storage interface {
 	SetGauge(key string, value float64)
 	SetCounter(key string, value int64)
+	GetGauge(key string) float64
+	GetCounter(key string) int64
 }
 
 func NewMemStorage() *MemStorage {
@@ -23,4 +25,12 @@ func (m *MemStorage) SetGauge(key string, value float64) {
 
 func (m *MemStorage) SetCounter(key string, value int64) {
 	m.counterMetrics[key] += value
+}
+
+func (m *MemStorage) GetGauge(key string) float64 {
+	return m.gaugeMetrics[key]
+}
+
+func (m *MemStorage) GetCounter(key string) int64 {
+	return m.counterMetrics[key]
 }
