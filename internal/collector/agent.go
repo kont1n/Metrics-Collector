@@ -13,7 +13,8 @@ type Agent struct {
 	ServerURL      string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
-	Metrics        map[int64]map[string]float64
+	PollCount      int64
+	Metrics        map[string]float64
 	wg             sync.WaitGroup
 	mu             sync.Mutex
 }
@@ -23,7 +24,8 @@ func NewAgent(serverURL string, pollInterval time.Duration, reportInterval time.
 		ServerURL:      serverURL,
 		PollInterval:   pollInterval,
 		ReportInterval: reportInterval,
-		Metrics:        make(map[int64]map[string]float64),
+		PollCount:      0,
+		Metrics:        make(map[string]float64),
 	}
 }
 
@@ -35,17 +37,15 @@ func (a *Agent) Run() {
 }
 
 func (a *Agent) Poll() {
-	var PollCount int64
 	defer a.wg.Done()
 	for {
 		time.Sleep(a.PollInterval)
-		a.mu.Lock()
 
-		PollCount++
+		a.mu.Lock()
+		a.PollCount++
 		runtimeMetrics := collectedGauges()
 		runtimeMetrics["RandomValue"] = rand.Float64()
-		a.Metrics[PollCount] = runtimeMetrics
-
+		a.Metrics = runtimeMetrics
 		a.mu.Unlock()
 	}
 }
@@ -54,16 +54,15 @@ func (a *Agent) Report() {
 	defer a.wg.Done()
 	for {
 		time.Sleep(a.ReportInterval)
+
 		a.mu.Lock()
-		for poll, gauge := range a.Metrics {
-			url := fmt.Sprintf("%s/%s/%s/%d", a.ServerURL, "counter", "PollCount", poll)
+		url := fmt.Sprintf("%s/%s/%s/%d", a.ServerURL, "counter", "PollCount", a.PollCount)
+		sendMetrics(url)
+		for metric, value := range a.Metrics {
+			url = fmt.Sprintf("%s/%s/%s/%f", a.ServerURL, "gauge", metric, value)
 			sendMetrics(url)
-			for metric, value := range gauge {
-				url = fmt.Sprintf("%s/%s/%s/%f", a.ServerURL, "gauge", metric, value)
-				sendMetrics(url)
-			}
-			delete(a.Metrics, poll)
 		}
+		a.PollCount = 0
 		a.mu.Unlock()
 	}
 }

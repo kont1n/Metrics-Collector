@@ -18,8 +18,6 @@ func PostMetric(store *storage.MemStorage) http.HandlerFunc {
 		metricName := chi.URLParam(r, "metric")
 		metricValue := chi.URLParam(r, "value")
 
-		fmt.Println("handler:", metricType, metricName, metricValue)
-
 		if metricName == "" {
 			w.Header().Set("Content-Type", "text/plain")
 			http.Error(w, "incorrect metric name", http.StatusNotFound)
@@ -34,34 +32,34 @@ func PostMetric(store *storage.MemStorage) http.HandlerFunc {
 
 		switch metricType {
 		case "gauge":
-			{
-				value, err := strconv.ParseFloat(metricValue, 64)
-				if err != nil {
-					w.Header().Set("Content-Type", "text/plain")
-					http.Error(w, "incorrect metric value", http.StatusBadRequest)
-					return
-				}
-				store.SetGauge(metricName, value)
+
+			value, err := strconv.ParseFloat(metricValue, 64)
+			if err != nil {
 				w.Header().Set("Content-Type", "text/plain")
-				w.WriteHeader(http.StatusOK)
+				http.Error(w, "incorrect metric value", http.StatusBadRequest)
+				return
 			}
+			store.SetGauge(metricName, value)
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+
 		case "counter":
-			{
-				value, err := strconv.ParseInt(metricValue, 10, 64)
-				if err != nil {
-					w.Header().Set("Content-Type", "text/plain")
-					http.Error(w, "incorrect metric value", http.StatusBadRequest)
-					return
-				}
-				store.SetCounter(metricName, value)
+
+			value, err := strconv.ParseInt(metricValue, 10, 64)
+			if err != nil {
 				w.Header().Set("Content-Type", "text/plain")
-				w.WriteHeader(http.StatusOK)
+				http.Error(w, "incorrect metric value", http.StatusBadRequest)
+				return
 			}
+			store.SetCounter(metricName, value)
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+
 		default:
-			{
-				w.Header().Set("Content-Type", "text/plain")
-				http.Error(w, "incorrect metric type", http.StatusBadRequest)
-			}
+
+			w.Header().Set("Content-Type", "text/plain")
+			http.Error(w, "incorrect metric type", http.StatusBadRequest)
+
 		}
 	}
 }
@@ -83,7 +81,6 @@ func GetMetrics(store *storage.MemStorage) http.HandlerFunc {
 					return
 				}
 				answer = strconv.FormatFloat(value, 'f', -1, 64)
-				//answer = fmt.Sprintf("%.3f", value)
 			}
 		case "counter":
 			{
