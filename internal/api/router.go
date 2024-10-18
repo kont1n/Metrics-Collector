@@ -12,8 +12,12 @@ func (h *APIHandler) InitRoutes() *chi.Mux {
 	router.Use(middleware.RequestID)
 	router.Use(h.LogAPI)
 
-	router.Post("/update/{type}/{metric}/{value}", h.postMetric)
-	router.Get("/value/{type}/{metric}", h.getMetrics)
+	router.Route("/update", func(r chi.Router) {
+		r.Post("/", h.postJSONMetric)
+		r.Post("/{type}/{metric}/{value}", h.postMetric)
+	})
+
+	router.Get("/value/{type}/{metric}", h.getMetric)
 	router.Get("/", h.indexHandler)
 
 	return router

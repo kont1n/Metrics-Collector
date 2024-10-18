@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"html"
 	"net/http"
@@ -8,9 +10,16 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 
+	"Metrics-Collector/internal/models"
 	"Metrics-Collector/internal/service"
+)
+
+const (
+	TextPlain       = "text/plain"
+	ApplicationJSON = "application/json"
 )
 
 type APIHandler struct {
@@ -25,6 +34,7 @@ func NewHandler(service *service.Service, loger *zap.SugaredLogger) *APIHandler 
 	}
 }
 
+// postMetric : Обработка запроса для создания метрики
 func (h *APIHandler) postMetric(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("PostMetric handler")
 	metricType := chi.URLParam(r, "type")
@@ -32,13 +42,13 @@ func (h *APIHandler) postMetric(w http.ResponseWriter, r *http.Request) {
 	metricValue := chi.URLParam(r, "value")
 
 	if metricName == "" {
-		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Type", TextPlain)
 		http.Error(w, "incorrect metric name", http.StatusNotFound)
 		return
 	}
 
 	if metricValue == "" {
-		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Type", TextPlain)
 		http.Error(w, "incorrect metric value", http.StatusBadRequest)
 		return
 	}
@@ -48,38 +58,49 @@ func (h *APIHandler) postMetric(w http.ResponseWriter, r *http.Request) {
 
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			w.Header().Set("Content-Type", "text/plain")
+			w.Header().Set("Content-Type", TextPlain)
 			http.Error(w, "incorrect metric value", http.StatusBadRequest)
 			return
 		}
-		h.service.SetGauge(metricName, value)
-		w.Header().Set("Content-Type", "text/plain")
+		err = h.service.SetGauge(metricName, value)
+		if err != nil {
+			w.Header().Set("Content-Type", TextPlain)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", TextPlain)
 		w.WriteHeader(http.StatusOK)
 
 	case "counter":
 
 		value, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
-			w.Header().Set("Content-Type", "text/plain")
+			w.Header().Set("Content-Type", TextPlain)
 			http.Error(w, "incorrect metric value", http.StatusBadRequest)
 			return
 		}
-		h.service.SetCounter(metricName, value)
-		w.Header().Set("Content-Type", "text/plain")
+		err = h.service.SetCounter(metricName, value)
+		if err != nil {
+			w.Header().Set("Content-Type", TextPlain)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", TextPlain)
 		w.WriteHeader(http.StatusOK)
 
 	default:
 
-		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Type", TextPlain)
 		http.Error(w, "incorrect metric type", http.StatusBadRequest)
 
 	}
 }
 
-func (h *APIHandler) getMetrics(w http.ResponseWriter, r *http.Request) {
+// getMetric : Обработка запроса для получения значения метрики
+func (h *APIHandler) getMetric(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("GetMetrics handler")
 	var answer string
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", TextPlain)
 
 	metricType := chi.URLParam(r, "type")
 	metricName := chi.URLParam(r, "metric")
@@ -105,7 +126,7 @@ func (h *APIHandler) getMetrics(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		{
-			w.Header().Set("Content-Type", "text/plain")
+			w.Header().Set("Content-Type", TextPlain)
 			http.Error(w, "incorrect metric type", http.StatusBadRequest)
 		}
 	}
@@ -117,6 +138,7 @@ func (h *APIHandler) getMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// indexHandler : Обработка запроса для получения списка метрик на html странице
 func (h *APIHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("Index handler")
 	var result string
@@ -141,11 +163,88 @@ func (h *APIHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
 		html.EscapeString(result) +
 		"</pre></body></html>"
 
-	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Content-Type", TextPlain)
 	w.WriteHeader(http.StatusOK)
 
 	if _, err := w.Write([]byte(htmlString)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+}
+
+// postJSONMetric : Обработка запроса на создание метрики в JSON формате
+func (h *APIHandler) postJSONMetric(w http.ResponseWriter, r *http.Request) {
+	h.loger.Debugln("PostJSONMetric handler")
+
+	var metric models.Metrics
+	var result models.MetricResponse
+	var buf bytes.Buffer
+	reqID := middleware.GetReqID(r.Context())
+
+	_, err = buf.ReadFrom(r.Body)
+	if err != nil {
+		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
+		return
+	}
+
+	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
+		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
+		return
+	}
+
+	switch metric.MType {
+	case "gauge":
+
+		err = h.service.SetGauge(metric.ID, *metric.Value)
+		if err != nil {
+			h.jsonError(w, "internal server error", http.StatusInternalServerError, reqID)
+			return
+		}
+		h.withJSON(w, result, http.StatusOK, reqID)
+
+	case "counter":
+
+		err = h.service.SetCounter(metric.ID, *metric.Delta)
+		if err != nil {
+			h.jsonError(w, "internal server error", http.StatusInternalServerError, reqID)
+			return
+		}
+		h.withJSON(w, result, http.StatusOK, reqID)
+
+	default:
+
+		h.jsonError(w, "incorrect metric type", http.StatusBadRequest, reqID)
+	}
+}
+
+// jsonError : Обработка ошибок в JSON формате
+func (h *APIHandler) jsonError(w http.ResponseWriter, error string, code int, reqID string) {
+	h.loger.Debugln("JSON Error util")
+
+	var resp []byte
+	w.WriteHeader(code)
+	w.Header().Set("Content-Type", ApplicationJSON)
+	answer := models.ErrorResponse{
+		RequestID: reqID,
+		Error:     error,
+	}
+	resp, err = json.Marshal(answer)
+	if err != nil {
+		h.loger.Errorf("Error marshalling response: %v", err)
+		return
+	}
+	_, err = w.Write(resp)
+	if err != nil {
+		h.loger.Errorf("Error writing response: %v", err)
+		return
+	}
+}
+
+// withJSON : Отправка ответа в JSON формате
+func (h *APIHandler) withJSON(w http.ResponseWriter, v any, status int, reqID string) {
+	w.Header().Add("Content-Type", ApplicationJSON)
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		h.jsonError(w, "failed to encode", http.StatusInternalServerError, reqID)
 	}
 }

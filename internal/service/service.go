@@ -18,14 +18,16 @@ func NewService(store *storage.Store, loger *zap.SugaredLogger) *Service {
 	}
 }
 
-func (s Service) SetGauge(name string, value float64) {
+func (s Service) SetGauge(name string, value float64) error {
 	s.loger.Debugln("SetGauge")
 	s.store.MemStorage.SetGauge(name, value)
+	return nil
 }
 
-func (s Service) SetCounter(name string, value int64) {
+func (s Service) SetCounter(name string, value int64) error {
 	s.loger.Debugln("SetCounter")
 	s.store.MemStorage.SetCounter(name, value)
+	return nil
 }
 
 func (s Service) GetGauge(name string) (value float64, exists bool) {

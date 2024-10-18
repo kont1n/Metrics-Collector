@@ -21,6 +21,7 @@ func Run(handler *APIHandler, sugar *zap.SugaredLogger) {
 	httpServerExitDone := &sync.WaitGroup{}
 	httpServerExitDone.Add(1)
 	serverAddress := config.ParseServerConfig()
+	sugar.Infoln("Web-server address: ", serverAddress)
 	webSrv := StartHTTPServer(httpServerExitDone, serverAddress, handler.InitRoutes(), sugar)
 
 	// Завершение работы веб сервера
