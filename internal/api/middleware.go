@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/negroni"
 )
 
-func (h *ApiHandler) LogAPI(handler http.Handler) http.Handler {
+func (h *APIHandler) LogAPI(handler http.Handler) http.Handler {
 	h.loger.Debugln("LogAPI middleware")
 	logFn := func(writer http.ResponseWriter, request *http.Request) {
 		start := time.Now()

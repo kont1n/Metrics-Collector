@@ -16,12 +16,12 @@ import (
 
 var err error
 
-func Run(handler *ApiHandler, sugar *zap.SugaredLogger) {
+func Run(handler *APIHandler, sugar *zap.SugaredLogger) {
 	// Запуск веб сервера
 	httpServerExitDone := &sync.WaitGroup{}
 	httpServerExitDone.Add(1)
 	serverAddress := config.ParseServerConfig()
-	webSrv := StartHttpServer(httpServerExitDone, serverAddress, handler.InitRoutes(), sugar)
+	webSrv := StartHTTPServer(httpServerExitDone, serverAddress, handler.InitRoutes(), sugar)
 
 	// Завершение работы веб сервера
 	stop := make(chan os.Signal, 1)
@@ -38,7 +38,7 @@ func Run(handler *ApiHandler, sugar *zap.SugaredLogger) {
 	httpServerExitDone.Wait()
 }
 
-func StartHttpServer(wg *sync.WaitGroup, address string, handler http.Handler, sugar *zap.SugaredLogger) *http.Server {
+func StartHTTPServer(wg *sync.WaitGroup, address string, handler http.Handler, sugar *zap.SugaredLogger) *http.Server {
 	srv := &http.Server{
 		Addr:         address,
 		Handler:      handler,

@@ -20,7 +20,7 @@ var (
 	logger   *zap.Logger
 	store    *storage.Store
 	srv      *service.Service
-	handler  *api.ApiHandler
+	handler  *api.APIHandler
 )
 
 func init() {
@@ -35,8 +35,7 @@ func init() {
 	}
 
 	// Подключение логирования
-	var level zapcore.Level
-	level = zapcore.Level(logLevel)
+	level := zapcore.Level(logLevel)
 	logCfg := zap.NewDevelopmentConfig()
 	logCfg.Level = zap.NewAtomicLevelAt(level)
 	logger, err = logCfg.Build()

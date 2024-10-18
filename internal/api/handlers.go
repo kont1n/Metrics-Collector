@@ -13,19 +13,19 @@ import (
 	"Metrics-Collector/internal/service"
 )
 
-type ApiHandler struct {
+type APIHandler struct {
 	service *service.Service
 	loger   *zap.SugaredLogger
 }
 
-func NewHandler(service *service.Service, loger *zap.SugaredLogger) *ApiHandler {
-	return &ApiHandler{
+func NewHandler(service *service.Service, loger *zap.SugaredLogger) *APIHandler {
+	return &APIHandler{
 		service: service,
 		loger:   loger,
 	}
 }
 
-func (h *ApiHandler) postMetric(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) postMetric(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("PostMetric handler")
 	metricType := chi.URLParam(r, "type")
 	metricName := chi.URLParam(r, "metric")
@@ -76,7 +76,7 @@ func (h *ApiHandler) postMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *ApiHandler) getMetrics(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) getMetrics(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("GetMetrics handler")
 	var answer string
 	w.Header().Set("Content-Type", "text/plain")
@@ -117,7 +117,7 @@ func (h *ApiHandler) getMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *ApiHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
+func (h *APIHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("Index handler")
 	var result string
 
