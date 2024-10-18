@@ -6,6 +6,7 @@ import (
 )
 
 func (h *ApiHandler) InitRoutes() *chi.Mux {
+	h.loger.Debugln("InitRoutes")
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)

@@ -26,6 +26,7 @@ func NewHandler(service *service.Service, loger *zap.SugaredLogger) *ApiHandler 
 }
 
 func (h *ApiHandler) postMetric(w http.ResponseWriter, r *http.Request) {
+	h.loger.Debugln("PostMetric handler")
 	metricType := chi.URLParam(r, "type")
 	metricName := chi.URLParam(r, "metric")
 	metricValue := chi.URLParam(r, "value")
@@ -76,6 +77,7 @@ func (h *ApiHandler) postMetric(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ApiHandler) getMetrics(w http.ResponseWriter, r *http.Request) {
+	h.loger.Debugln("GetMetrics handler")
 	var answer string
 	w.Header().Set("Content-Type", "text/plain")
 
@@ -116,6 +118,7 @@ func (h *ApiHandler) getMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ApiHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
+	h.loger.Debugln("Index handler")
 	var result string
 
 	for metric, value := range h.service.GetCounters() {

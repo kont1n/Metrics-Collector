@@ -8,7 +8,8 @@ import (
 	"github.com/urfave/negroni"
 )
 
-func (api *ApiHandler) LogAPI(h http.Handler) http.Handler {
+func (h *ApiHandler) LogAPI(handler http.Handler) http.Handler {
+	h.loger.Debugln("LogAPI middleware")
 	logFn := func(writer http.ResponseWriter, request *http.Request) {
 		start := time.Now()
 		uri := request.RequestURI
@@ -16,18 +17,18 @@ func (api *ApiHandler) LogAPI(h http.Handler) http.Handler {
 		reqID := middleware.GetReqID(request.Context())
 		lrw := negroni.NewResponseWriter(writer)
 
-		h.ServeHTTP(lrw, request)
+		handler.ServeHTTP(lrw, request)
 
 		statusCode := lrw.Status()
 		duration := time.Since(start).Milliseconds()
 
-		api.loger.Infoln("Request received: ",
+		h.loger.Infoln("Request received: ",
 			"requestID:", reqID,
 			"uri:", uri,
 			"method:", method,
 			"duration:", duration,
 		)
-		api.loger.Infoln("Response sent: ",
+		h.loger.Infoln("Response sent: ",
 			"requestID:", reqID,
 			"statusCode:", statusCode,
 			"size:", lrw.Size(),

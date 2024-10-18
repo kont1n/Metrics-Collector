@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,7 +21,7 @@ func Run(handler *ApiHandler, sugar *zap.SugaredLogger) {
 	httpServerExitDone := &sync.WaitGroup{}
 	httpServerExitDone.Add(1)
 	serverAddress := config.ParseServerConfig()
-	webSrv := StartHttpServer(httpServerExitDone, serverAddress, handler.InitRoutes())
+	webSrv := StartHttpServer(httpServerExitDone, serverAddress, handler.InitRoutes(), sugar)
 
 	// Завершение работы веб сервера
 	stop := make(chan os.Signal, 1)
@@ -39,7 +38,7 @@ func Run(handler *ApiHandler, sugar *zap.SugaredLogger) {
 	httpServerExitDone.Wait()
 }
 
-func StartHttpServer(wg *sync.WaitGroup, address string, handler http.Handler) *http.Server {
+func StartHttpServer(wg *sync.WaitGroup, address string, handler http.Handler, sugar *zap.SugaredLogger) *http.Server {
 	srv := &http.Server{
 		Addr:         address,
 		Handler:      handler,
@@ -51,7 +50,7 @@ func StartHttpServer(wg *sync.WaitGroup, address string, handler http.Handler) *
 		defer wg.Done()
 
 		if err = srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("ListenAndServe() error: %v", err)
+			sugar.Fatalf("ListenAndServe() error: %v", err)
 		}
 	}()
 
