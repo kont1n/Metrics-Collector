@@ -1,33 +1,61 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"log"
+	"os"
+	"strconv"
 
-	"Metrics-Collector/internal/config"
-	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"Metrics-Collector/internal/api"
+	"Metrics-Collector/internal/service"
 	"Metrics-Collector/internal/storage"
 )
 
 var (
-	err error
+	err      error
+	logLevel int
+	logger   *zap.Logger
+	store    *storage.Store
+	srv      *service.Service
+	handler  *api.APIHandler
 )
 
-func main() {
-	host := config.ParseServerConfig()
+func init() {
+	// Подключение к файлу переменных окружения
+	if err = godotenv.Load(); err != nil {
+		log.Fatal("No .env file found")
+	}
 
-	store := storage.NewMemStorage()
+	logLevel, err = strconv.Atoi(os.Getenv("LOGGER_LEVEL"))
+	if err != nil {
+		log.Fatal("LOGGER_LEVEL is not set")
+	}
 
-	router := chi.NewRouter()
-	router.Post("/update/{type}/{metric}/{value}", api.PostMetric(store))
-	router.Get("/value/{type}/{metric}", api.GetMetrics(store))
-	router.Get("/", api.IndexHandler(store))
-
-	fmt.Printf("Server started on %s\n", host)
-	if err = http.ListenAndServe(host, router); err != nil {
-		fmt.Println("Web server error:", err.Error())
+	// Подключение логирования
+	level := zapcore.Level(logLevel)
+	logCfg := zap.NewDevelopmentConfig()
+	logCfg.Level = zap.NewAtomicLevelAt(level)
+	logger, err = logCfg.Build()
+	if err != nil {
+		log.Fatal("Failed to build logger:", err.Error())
 		return
 	}
+	defer logger.Sync()
+
+	logger.Info("Initializing success")
+}
+
+func main() {
+	sugar := logger.Sugar()
+
+	store = storage.NewStore(sugar)
+	srv = service.NewService(store, sugar)
+	handler = api.NewHandler(srv, sugar)
+
+	sugar.Infof("Application started")
+	api.Run(handler, sugar)
+	sugar.Infof("Application shutdown")
 }

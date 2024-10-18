@@ -8,134 +8,144 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 
-	"Metrics-Collector/internal/storage"
+	"Metrics-Collector/internal/service"
 )
 
-func PostMetric(store *storage.MemStorage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		metricType := chi.URLParam(r, "type")
-		metricName := chi.URLParam(r, "metric")
-		metricValue := chi.URLParam(r, "value")
+type APIHandler struct {
+	service *service.Service
+	loger   *zap.SugaredLogger
+}
 
-		if metricName == "" {
-			w.Header().Set("Content-Type", "text/plain")
-			http.Error(w, "incorrect metric name", http.StatusNotFound)
-			return
-		}
+func NewHandler(service *service.Service, loger *zap.SugaredLogger) *APIHandler {
+	return &APIHandler{
+		service: service,
+		loger:   loger,
+	}
+}
 
-		if metricValue == "" {
+func (h *APIHandler) postMetric(w http.ResponseWriter, r *http.Request) {
+	h.loger.Debugln("PostMetric handler")
+	metricType := chi.URLParam(r, "type")
+	metricName := chi.URLParam(r, "metric")
+	metricValue := chi.URLParam(r, "value")
+
+	if metricName == "" {
+		w.Header().Set("Content-Type", "text/plain")
+		http.Error(w, "incorrect metric name", http.StatusNotFound)
+		return
+	}
+
+	if metricValue == "" {
+		w.Header().Set("Content-Type", "text/plain")
+		http.Error(w, "incorrect metric value", http.StatusBadRequest)
+		return
+	}
+
+	switch metricType {
+	case "gauge":
+
+		value, err := strconv.ParseFloat(metricValue, 64)
+		if err != nil {
 			w.Header().Set("Content-Type", "text/plain")
 			http.Error(w, "incorrect metric value", http.StatusBadRequest)
 			return
 		}
+		h.service.SetGauge(metricName, value)
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
 
-		switch metricType {
-		case "gauge":
+	case "counter":
 
-			value, err := strconv.ParseFloat(metricValue, 64)
-			if err != nil {
-				w.Header().Set("Content-Type", "text/plain")
-				http.Error(w, "incorrect metric value", http.StatusBadRequest)
+		value, err := strconv.ParseInt(metricValue, 10, 64)
+		if err != nil {
+			w.Header().Set("Content-Type", "text/plain")
+			http.Error(w, "incorrect metric value", http.StatusBadRequest)
+			return
+		}
+		h.service.SetCounter(metricName, value)
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+
+	default:
+
+		w.Header().Set("Content-Type", "text/plain")
+		http.Error(w, "incorrect metric type", http.StatusBadRequest)
+
+	}
+}
+
+func (h *APIHandler) getMetrics(w http.ResponseWriter, r *http.Request) {
+	h.loger.Debugln("GetMetrics handler")
+	var answer string
+	w.Header().Set("Content-Type", "text/plain")
+
+	metricType := chi.URLParam(r, "type")
+	metricName := chi.URLParam(r, "metric")
+
+	switch metricType {
+	case "gauge":
+		{
+			value, exists := h.service.GetGauge(metricName)
+			if !exists {
+				http.Error(w, "unknown metric", http.StatusNotFound)
 				return
 			}
-			store.SetGauge(metricName, value)
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusOK)
-
-		case "counter":
-
-			value, err := strconv.ParseInt(metricValue, 10, 64)
-			if err != nil {
-				w.Header().Set("Content-Type", "text/plain")
-				http.Error(w, "incorrect metric value", http.StatusBadRequest)
+			answer = strconv.FormatFloat(value, 'f', -1, 64)
+		}
+	case "counter":
+		{
+			value, exists := h.service.GetCounter(metricName)
+			if !exists {
+				http.Error(w, "unknown metric", http.StatusNotFound)
 				return
 			}
-			store.SetCounter(metricName, value)
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusOK)
-
-		default:
-
+			answer = fmt.Sprintf("%d", value)
+		}
+	default:
+		{
 			w.Header().Set("Content-Type", "text/plain")
 			http.Error(w, "incorrect metric type", http.StatusBadRequest)
-
 		}
+	}
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write([]byte(answer))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
-func GetMetrics(store *storage.MemStorage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var answer string
-		w.Header().Set("Content-Type", "text/plain")
+func (h *APIHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
+	h.loger.Debugln("Index handler")
+	var result string
 
-		metricType := chi.URLParam(r, "type")
-		metricName := chi.URLParam(r, "metric")
-
-		switch metricType {
-		case "gauge":
-			{
-				value, exists := store.GetGauge(metricName)
-				if !exists {
-					http.Error(w, "unknown metric", http.StatusNotFound)
-					return
-				}
-				answer = strconv.FormatFloat(value, 'f', -1, 64)
-			}
-		case "counter":
-			{
-				value, exists := store.GetCounter(metricName)
-				if !exists {
-					http.Error(w, "unknown metric", http.StatusNotFound)
-					return
-				}
-				answer = fmt.Sprintf("%d", value)
-			}
-		default:
-			{
-				w.Header().Set("Content-Type", "text/plain")
-				http.Error(w, "incorrect metric type", http.StatusBadRequest)
-			}
-		}
-		w.WriteHeader(http.StatusOK)
-		_, err := w.Write([]byte(answer))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	for metric, value := range h.service.GetCounters() {
+		result += fmt.Sprintf("%s: %d\n", metric, value)
 	}
-}
 
-func IndexHandler(store *storage.MemStorage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var result string
+	m := h.service.GetGauges()
 
-		for metric, value := range store.GetCounters() {
-			result += fmt.Sprintf("%s: %d\n", metric, value)
-		}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-		m := store.GetGauges()
+	for _, k := range keys {
+		result += fmt.Sprintf("%s: %.3f\n", k, m[k])
+	}
 
-		keys := make([]string, 0, len(m))
-		for k := range m {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
+	htmlString := "<html><head><title>Metrics</title></head><body><pre>" +
+		html.EscapeString(result) +
+		"</pre></body></html>"
 
-		for _, k := range keys {
-			result += fmt.Sprintf("%s: %.3f\n", k, m[k])
-		}
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
 
-		htmlString := "<html><head><title>Metrics</title></head><body><pre>" +
-			html.EscapeString(result) +
-			"</pre></body></html>"
-
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
-
-		if _, err := w.Write([]byte(htmlString)); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	if _, err := w.Write([]byte(htmlString)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
