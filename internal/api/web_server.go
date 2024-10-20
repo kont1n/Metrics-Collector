@@ -16,7 +16,7 @@ import (
 
 var err error
 
-func Run(handler *APIHandler, sugar *zap.SugaredLogger) {
+func Run(handler *Handler, sugar *zap.SugaredLogger) {
 	// Запуск веб сервера
 	httpServerExitDone := &sync.WaitGroup{}
 	httpServerExitDone.Add(1)

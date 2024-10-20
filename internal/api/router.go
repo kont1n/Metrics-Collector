@@ -5,7 +5,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func (h *APIHandler) InitRoutes() *chi.Mux {
+func (h *Handler) InitRoutes() *chi.Mux {
 	h.loger.Debugln("InitRoutes start")
 	router := chi.NewRouter()
 

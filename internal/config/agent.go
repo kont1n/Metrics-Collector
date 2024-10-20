@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
@@ -28,7 +29,7 @@ func parseAgentFlags() {
 	flag.Parse()
 }
 
-func ParseAgentConfig() (address string, pollInterval, reportInterval time.Duration) {
+func ParseAgentConfig(log *slog.Logger) (address string, pollInterval, reportInterval time.Duration) {
 	envAddress := os.Getenv("ADDRESS")
 	envReportInterval := os.Getenv("REPORT_INTERVAL")
 	envPollInterval := os.Getenv("POLL_INTERVAL")
@@ -44,7 +45,7 @@ func ParseAgentConfig() (address string, pollInterval, reportInterval time.Durat
 	if envReportInterval != "" {
 		intervalReport, err := strconv.ParseInt(envReportInterval, 10, 64)
 		if err != nil {
-			fmt.Println("Error parsing REPORT_INTERVAL env variable")
+			log.Error("Error parsing REPORT_INTERVAL env variable")
 		}
 		reportInterval = time.Duration(intervalReport) * time.Second
 	} else {
@@ -54,7 +55,7 @@ func ParseAgentConfig() (address string, pollInterval, reportInterval time.Durat
 	if envPollInterval != "" {
 		intervalPoll, err := strconv.ParseInt(envPollInterval, 10, 64)
 		if err != nil {
-			fmt.Println("Error parsing POLL_INTERVAL env variable")
+			log.Error("Error parsing POLL_INTERVAL env variable")
 		}
 		pollInterval = time.Duration(intervalPoll) * time.Second
 	} else {

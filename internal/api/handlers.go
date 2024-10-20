@@ -23,7 +23,7 @@ const (
 	ApplicationJSON = "application/json"
 )
 
-type APIHandler struct {
+type Handler struct {
 	service *service.Service
 	loger   *zap.SugaredLogger
 	Handlers
@@ -39,16 +39,16 @@ type Handlers interface {
 	jsonError(w http.ResponseWriter, error string, code int, reqID string)
 }
 
-func NewHandler(service *service.Service, loger *zap.SugaredLogger) *APIHandler {
+func NewHandler(service *service.Service, loger *zap.SugaredLogger) *Handler {
 	loger.Debugln("Create new API handler")
-	return &APIHandler{
+	return &Handler{
 		service: service,
 		loger:   loger,
 	}
 }
 
 // postMetric : Обработка запроса для создания метрики
-func (h *APIHandler) postMetric(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) postMetric(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("PostMetric handler start")
 	metricType := chi.URLParam(r, "type")
 	metricName := chi.URLParam(r, "metric")
@@ -111,7 +111,7 @@ func (h *APIHandler) postMetric(w http.ResponseWriter, r *http.Request) {
 }
 
 // getMetric : Обработка запроса для получения значения метрики
-func (h *APIHandler) getMetric(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getMetric(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("GetMetrics handler start")
 	var answer string
 	w.Header().Set("Content-Type", TextPlain)
@@ -154,7 +154,7 @@ func (h *APIHandler) getMetric(w http.ResponseWriter, r *http.Request) {
 }
 
 // indexHandler : Обработка запроса для получения списка метрик на html странице
-func (h *APIHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) indexHandler(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("Index handler start")
 	var result string
 
@@ -189,7 +189,7 @@ func (h *APIHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // postJSONMetric : Обработка запроса на создание метрики в JSON формате
-func (h *APIHandler) postJSONMetric(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) postJSONMetric(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("PostJSONMetric handler start")
 
 	var metric models.Metrics
@@ -201,6 +201,8 @@ func (h *APIHandler) postJSONMetric(w http.ResponseWriter, r *http.Request) {
 		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
 		return
 	}
+
+	h.loger.Debugln("Request body:", string(buf.Bytes()))
 
 	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
 		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
@@ -235,7 +237,7 @@ func (h *APIHandler) postJSONMetric(w http.ResponseWriter, r *http.Request) {
 }
 
 // getJSONMetric : Обработка запроса для получения значения метрики в JSON формате
-func (h *APIHandler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("GetJSONMetric handler start")
 
 	var metric models.Metrics
@@ -247,6 +249,8 @@ func (h *APIHandler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
 		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
 		return
 	}
+
+	h.loger.Debugln("Request body:", string(buf.Bytes()))
 
 	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
 		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
@@ -284,7 +288,7 @@ func (h *APIHandler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
 }
 
 // withJSON : Отправка ответа в JSON формате
-func (h *APIHandler) withJSON(w http.ResponseWriter, v any, status int, reqID string) {
+func (h *Handler) withJSON(w http.ResponseWriter, v any, status int, reqID string) {
 	h.loger.Debugln("withJSON util start")
 
 	w.Header().Add("Content-Type", ApplicationJSON)
@@ -296,7 +300,7 @@ func (h *APIHandler) withJSON(w http.ResponseWriter, v any, status int, reqID st
 }
 
 // jsonError : Обработка ошибок в JSON формате
-func (h *APIHandler) jsonError(w http.ResponseWriter, error string, code int, reqID string) {
+func (h *Handler) jsonError(w http.ResponseWriter, error string, code int, reqID string) {
 	h.loger.Debugln("JSON Error util start")
 
 	var resp []byte

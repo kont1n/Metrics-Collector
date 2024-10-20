@@ -1,13 +1,8 @@
 package main
 
 import (
-	"log"
-	"os"
-	"strconv"
-
-	"github.com/joho/godotenv"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"log"
 
 	"Metrics-Collector/internal/api"
 	"Metrics-Collector/internal/service"
@@ -15,29 +10,17 @@ import (
 )
 
 var (
-	err      error
-	logLevel int
-	logger   *zap.Logger
-	store    *storage.Store
-	srv      *service.Service
-	handler  *api.APIHandler
+	err     error
+	logger  *zap.Logger
+	store   *storage.Store
+	srv     *service.Service
+	handler *api.Handler
 )
 
 func init() {
-	// Подключение к файлу переменных окружения
-	if err = godotenv.Load(); err != nil {
-		log.Fatal("No .env file found")
-	}
-
-	logLevel, err = strconv.Atoi(os.Getenv("LOGGER_LEVEL"))
-	if err != nil {
-		log.Fatal("LOGGER_LEVEL is not set")
-	}
-
 	// Подключение логирования
-	level := zapcore.Level(logLevel)
 	logCfg := zap.NewDevelopmentConfig()
-	logCfg.Level = zap.NewAtomicLevelAt(level)
+	logCfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	logger, err = logCfg.Build()
 	if err != nil {
 		log.Fatal("Failed to build logger:", err.Error())
