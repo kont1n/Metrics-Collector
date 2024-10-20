@@ -63,8 +63,10 @@ func (a *Agent) Poll() {
 		runtimeMetrics := collectedGauges()
 		runtimeMetrics["RandomValue"] = rand.Float64()
 		a.Metrics = runtimeMetrics
+		a.log.Debug("Metrics collected",
+			slog.Int64("PollCount", a.PollCount),
+			slog.Any("metrics", a.Metrics))
 		a.mu.Unlock()
-		a.log.Debug("Collect end")
 	}
 }
 
