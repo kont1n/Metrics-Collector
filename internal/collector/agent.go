@@ -1,7 +1,6 @@
 package collector
 
 import (
-	"Metrics-Collector/internal/models"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,8 +8,11 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
+
+	"Metrics-Collector/internal/models"
 )
 
 const (
@@ -44,8 +46,8 @@ func (a *Agent) Run() {
 	a.log.Debug("Agent run")
 	a.wg.Add(2)
 	go a.Poll()
-	//go a.Report()
-	go a.ReportJSON()
+	go a.Report()
+	//go a.ReportJSON()
 	a.wg.Wait()
 }
 
@@ -145,41 +147,54 @@ func collectedGauges() map[string]float64 {
 }
 
 func sendMetrics(url string, log *slog.Logger) {
-	log.Debug("Send metric:", url)
+	log.Debug("Send metric",
+		slog.String("url", url))
+
 	response, err := http.Post(url, TextPlain, nil)
 	if err != nil {
-		log.Error("Error sending metrics:", err.Error())
+		log.Error("Error sending metrics:",
+			slog.String("error", err.Error()))
 		return
 	}
-	log.Debug("Status code:", response.StatusCode)
+	log.Debug("Response received",
+		slog.String("Status code", strconv.Itoa(response.StatusCode)))
 	err = response.Body.Close()
 	if err != nil {
-		log.Error("Error closing response body:", err.Error())
+		log.Error("Error closing response body:",
+			slog.String("error", err.Error()))
 		return
 	}
 	log.Debug("Send metric end")
 }
 
 func sendJSONMetrics(url string, metric models.Metrics, log *slog.Logger) {
-	log.Debug("Send metric:", url)
+	log.Debug("Send JSON metric",
+		slog.String("url", url))
 
 	body, err := json.Marshal(metric)
 	if err != nil {
-		log.Error("Error marshalling song: %v", err)
+		log.Error("Error marshalling song",
+			slog.String("error", err.Error()))
 		return
 	}
+	log.Debug("Metric info",
+		slog.String("metric", string(body)))
+
 	buf := bytes.NewBuffer(body)
 
 	response, err := http.Post(url, ApplicationJSON, buf)
 	if err != nil {
-		log.Error("Error sending metrics:", err.Error())
+		log.Error("Error sending metrics",
+			slog.String("error", err.Error()))
 		return
 	}
-	log.Debug("Status code:", response.StatusCode)
+	log.Debug("Response received",
+		slog.String("Status code", strconv.Itoa(response.StatusCode)))
 	err = response.Body.Close()
 	if err != nil {
-		log.Error("Error closing response body:", err.Error())
+		log.Error("Error closing response body",
+			slog.String("error", err.Error()))
 		return
 	}
-	log.Debug("Send metric end")
+	log.Debug("Send JSON metric end")
 }

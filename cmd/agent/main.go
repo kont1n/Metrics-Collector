@@ -13,7 +13,7 @@ var log *slog.Logger
 func init() {
 	// Подключение логирования
 	log = slog.New(
-		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelInfo,
 		}))
 }
@@ -21,7 +21,10 @@ func init() {
 func main() {
 
 	address, pollInterval, reportInterval := config.ParseAgentConfig()
-	log.Info("Agent started. Sending metrics to", address)
+
+	log.Info("Agent started",
+		slog.String("Sending metrics to", address),
+	)
 
 	agent := collector.NewAgent(address, pollInterval, reportInterval, log)
 	agent.Run()
