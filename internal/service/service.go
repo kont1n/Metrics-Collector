@@ -9,6 +9,16 @@ import (
 type Service struct {
 	store *storage.Store
 	loger *zap.SugaredLogger
+	Services
+}
+
+type Services interface {
+	SetGauge(name string, value float64) error
+	SetCounter(name string, value int64) error
+	GetGauge(name string) (value float64, exists bool)
+	GetCounter(name string) (value int64, exists bool)
+	GetCounters() map[string]int64
+	GetGauges() map[string]float64
 }
 
 func NewService(store *storage.Store, loger *zap.SugaredLogger) *Service {

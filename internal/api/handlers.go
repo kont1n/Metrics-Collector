@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	TextHTML        = "text/html"
 	TextPlain       = "text/plain"
 	ApplicationJSON = "application/json"
 )
@@ -25,6 +26,17 @@ const (
 type APIHandler struct {
 	service *service.Service
 	loger   *zap.SugaredLogger
+	Handlers
+}
+
+type Handlers interface {
+	postMetric(w http.ResponseWriter, r *http.Request)
+	getMetric(w http.ResponseWriter, r *http.Request)
+	indexHandler(w http.ResponseWriter, r *http.Request)
+	postJSONMetric(w http.ResponseWriter, r *http.Request)
+	getJSONMetric(w http.ResponseWriter, r *http.Request)
+	withJSON(w http.ResponseWriter, v any, status int, reqID string)
+	jsonError(w http.ResponseWriter, error string, code int, reqID string)
 }
 
 func NewHandler(service *service.Service, loger *zap.SugaredLogger) *APIHandler {
@@ -166,7 +178,7 @@ func (h *APIHandler) indexHandler(w http.ResponseWriter, r *http.Request) {
 		html.EscapeString(result) +
 		"</pre></body></html>"
 
-	w.Header().Set("Content-Type", TextPlain)
+	w.Header().Set("Content-Type", TextHTML)
 	w.WriteHeader(http.StatusOK)
 
 	if _, err = w.Write([]byte(htmlString)); err != nil {
@@ -271,6 +283,18 @@ func (h *APIHandler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("GetJSONMetric handler end")
 }
 
+// withJSON : Отправка ответа в JSON формате
+func (h *APIHandler) withJSON(w http.ResponseWriter, v any, status int, reqID string) {
+	h.loger.Debugln("withJSON util start")
+
+	w.Header().Add("Content-Type", ApplicationJSON)
+	w.WriteHeader(status)
+	if err = json.NewEncoder(w).Encode(v); err != nil {
+		h.jsonError(w, "failed to encode", http.StatusInternalServerError, reqID)
+	}
+	h.loger.Debugln("withJSON util end")
+}
+
 // jsonError : Обработка ошибок в JSON формате
 func (h *APIHandler) jsonError(w http.ResponseWriter, error string, code int, reqID string) {
 	h.loger.Debugln("JSON Error util start")
@@ -293,16 +317,4 @@ func (h *APIHandler) jsonError(w http.ResponseWriter, error string, code int, re
 		return
 	}
 	h.loger.Debugln("JSON Error util end")
-}
-
-// withJSON : Отправка ответа в JSON формате
-func (h *APIHandler) withJSON(w http.ResponseWriter, v any, status int, reqID string) {
-	h.loger.Debugln("withJSON util start")
-
-	w.Header().Add("Content-Type", ApplicationJSON)
-	w.WriteHeader(status)
-	if err = json.NewEncoder(w).Encode(v); err != nil {
-		h.jsonError(w, "failed to encode", http.StatusInternalServerError, reqID)
-	}
-	h.loger.Debugln("withJSON util end")
 }

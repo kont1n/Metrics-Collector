@@ -1,12 +1,21 @@
 package collector
 
 import (
+	"Metrics-Collector/internal/models"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/rand/v2"
 	"net/http"
 	"runtime"
 	"sync"
 	"time"
+)
+
+const (
+	TextPlain       = "text/plain"
+	ApplicationJSON = "application/json"
 )
 
 type Agent struct {
@@ -17,50 +26,85 @@ type Agent struct {
 	Metrics        map[string]float64
 	wg             sync.WaitGroup
 	mu             sync.Mutex
+	log            *slog.Logger
 }
 
-func NewAgent(serverURL string, pollInterval time.Duration, reportInterval time.Duration) *Agent {
+func NewAgent(serverURL string, pollInterval time.Duration, reportInterval time.Duration, log *slog.Logger) *Agent {
 	return &Agent{
 		ServerURL:      serverURL,
 		PollInterval:   pollInterval,
 		ReportInterval: reportInterval,
 		PollCount:      0,
 		Metrics:        make(map[string]float64),
+		log:            log,
 	}
 }
 
 func (a *Agent) Run() {
+	a.log.Debug("Agent run")
 	a.wg.Add(2)
 	go a.Poll()
-	go a.Report()
+	//go a.Report()
+	go a.ReportJSON()
 	a.wg.Wait()
 }
 
 func (a *Agent) Poll() {
+	a.log.Debug("Poll start")
 	defer a.wg.Done()
 	for {
 		time.Sleep(a.PollInterval)
 
+		a.log.Debug("Collect start")
 		a.mu.Lock()
 		a.PollCount++
 		runtimeMetrics := collectedGauges()
 		runtimeMetrics["RandomValue"] = rand.Float64()
 		a.Metrics = runtimeMetrics
 		a.mu.Unlock()
+		a.log.Debug("Collect end")
 	}
 }
 
 func (a *Agent) Report() {
+	a.log.Debug("Report start")
 	defer a.wg.Done()
 	for {
 		time.Sleep(a.ReportInterval)
 
 		a.mu.Lock()
 		url := fmt.Sprintf("%s/%s/%s/%d", a.ServerURL, "counter", "PollCount", a.PollCount)
-		sendMetrics(url)
+		sendMetrics(url, a.log)
 		for metric, value := range a.Metrics {
 			url = fmt.Sprintf("%s/%s/%s/%f", a.ServerURL, "gauge", metric, value)
-			sendMetrics(url)
+			sendMetrics(url, a.log)
+		}
+		a.PollCount = 0
+		a.mu.Unlock()
+	}
+}
+
+func (a *Agent) ReportJSON() {
+	a.log.Debug("ReportJSON start")
+	var counterData, gaugeData models.Metrics
+	defer a.wg.Done()
+	for {
+		time.Sleep(a.ReportInterval)
+
+		a.mu.Lock()
+		counterData = models.Metrics{
+			ID:    "PollCount",
+			MType: "counter",
+			Delta: &a.PollCount,
+		}
+		sendJSONMetrics(a.ServerURL, counterData, a.log)
+		for metric, value := range a.Metrics {
+			gaugeData = models.Metrics{
+				ID:    metric,
+				MType: "gauge",
+				Value: &value,
+			}
+			sendJSONMetrics(a.ServerURL, gaugeData, a.log)
 		}
 		a.PollCount = 0
 		a.mu.Unlock()
@@ -100,17 +144,42 @@ func collectedGauges() map[string]float64 {
 	return metrics
 }
 
-func sendMetrics(url string) {
-	fmt.Println("Send metric:", url)
-	response, err := http.Post(url, "text/plain", nil)
+func sendMetrics(url string, log *slog.Logger) {
+	log.Debug("Send metric:", url)
+	response, err := http.Post(url, TextPlain, nil)
 	if err != nil {
-		fmt.Println("Error sending metrics:", err.Error())
+		log.Error("Error sending metrics:", err.Error())
 		return
 	}
-	fmt.Println("Status code:", response.StatusCode)
+	log.Debug("Status code:", response.StatusCode)
 	err = response.Body.Close()
 	if err != nil {
-		fmt.Println("Error closing response body:", err.Error())
+		log.Error("Error closing response body:", err.Error())
 		return
 	}
+	log.Debug("Send metric end")
+}
+
+func sendJSONMetrics(url string, metric models.Metrics, log *slog.Logger) {
+	log.Debug("Send metric:", url)
+
+	body, err := json.Marshal(metric)
+	if err != nil {
+		log.Error("Error marshalling song: %v", err)
+		return
+	}
+	buf := bytes.NewBuffer(body)
+
+	response, err := http.Post(url, ApplicationJSON, buf)
+	if err != nil {
+		log.Error("Error sending metrics:", err.Error())
+		return
+	}
+	log.Debug("Status code:", response.StatusCode)
+	err = response.Body.Close()
+	if err != nil {
+		log.Error("Error closing response body:", err.Error())
+		return
+	}
+	log.Debug("Send metric end")
 }

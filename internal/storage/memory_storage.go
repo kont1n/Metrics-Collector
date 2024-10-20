@@ -8,6 +8,7 @@ type MemStorage struct {
 	gaugeMetrics   map[string]float64
 	counterMetrics map[string]int64
 	mu             sync.RWMutex
+	MemoryStorage
 }
 
 type MemoryStorage interface {
