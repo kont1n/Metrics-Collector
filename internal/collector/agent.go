@@ -139,6 +139,8 @@ func collectedGauges() map[string]float64 {
 	metrics["MSpanSys"] = float64(rtm.MSpanSys)
 	metrics["Mallocs"] = float64(rtm.Mallocs)
 	metrics["NextGC"] = float64(rtm.NextGC)
+	metrics["NumGC"] = float64(rtm.NumGC)
+	metrics["NumForcedGC"] = float64(rtm.NumForcedGC)
 	metrics["OtherSys"] = float64(rtm.OtherSys)
 	metrics["PauseTotalNs"] = float64(rtm.PauseTotalNs)
 	metrics["StackInuse"] = float64(rtm.StackInuse)

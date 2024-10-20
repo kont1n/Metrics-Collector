@@ -202,7 +202,7 @@ func (h *Handler) postJSONMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.loger.Debugln("Request body:", string(buf.Bytes()))
+	h.loger.Debugln("Request body:", buf.String())
 
 	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
 		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
@@ -250,7 +250,7 @@ func (h *Handler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.loger.Debugln("Request body:", string(buf.Bytes()))
+	h.loger.Debugln("Request body:", buf.String())
 
 	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
 		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
