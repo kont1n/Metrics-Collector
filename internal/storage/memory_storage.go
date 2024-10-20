@@ -1,6 +1,8 @@
 package storage
 
-import "sync"
+import (
+	"sync"
+)
 
 type MemStorage struct {
 	gaugeMetrics   map[string]float64

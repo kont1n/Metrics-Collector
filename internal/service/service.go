@@ -12,6 +12,7 @@ type Service struct {
 }
 
 func NewService(store *storage.Store, loger *zap.SugaredLogger) *Service {
+	loger.Debugln("Create new service")
 	return &Service{
 		store: store,
 		loger: loger,

@@ -166,7 +166,7 @@ func TestGetIncorrectMetricType(t *testing.T) {
 	defer logger.Sync()
 	sugar := logger.Sugar()
 	h := NewHandler(nil, sugar)
-	h.getMetrics(w, r)
+	h.getMetric(w, r)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
@@ -186,7 +186,7 @@ func TestUnknownGaugeMetric(t *testing.T) {
 	store := storage.NewStore(sugar)
 	srv := service.NewService(store, sugar)
 	h := NewHandler(srv, sugar)
-	h.getMetrics(w, r)
+	h.getMetric(w, r)
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
@@ -206,7 +206,7 @@ func TestUnknownCounterMetric(t *testing.T) {
 	store := storage.NewStore(sugar)
 	srv := service.NewService(store, sugar)
 	h := NewHandler(srv, sugar)
-	h.getMetrics(w, r)
+	h.getMetric(w, r)
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
@@ -229,7 +229,7 @@ func TestGetGaugeMetrics(t *testing.T) {
 
 	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
 
-	h.getMetrics(w, r)
+	h.getMetric(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "1", w.Body.String())
 }
@@ -253,7 +253,7 @@ func TestGetCounterMetrics(t *testing.T) {
 
 	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
 
-	h.getMetrics(w, r)
+	h.getMetric(w, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "1", w.Body.String())
 }

@@ -10,6 +10,7 @@ type Store struct {
 }
 
 func NewStore(loger *zap.SugaredLogger) *Store {
+	loger.Debugln("Create new store")
 	return &Store{
 		MemStorage: NewMemStorage(),
 		loger:      loger,
