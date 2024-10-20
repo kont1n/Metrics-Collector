@@ -46,8 +46,8 @@ func (a *Agent) Run() {
 	a.log.Debug("Agent run")
 	a.wg.Add(2)
 	go a.Poll()
-	go a.Report()
-	//go a.ReportJSON()
+	//go a.Report()
+	go a.ReportJSON()
 	a.wg.Wait()
 }
 
