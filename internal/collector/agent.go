@@ -2,6 +2,7 @@ package collector
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -173,6 +174,9 @@ func sendMetrics(url string, log *slog.Logger) {
 }
 
 func sendJSONMetrics(url string, metric models.Metrics, log *slog.Logger) {
+	var request *http.Request
+	var response *http.Response
+
 	log.Debug("Send JSON metric",
 		slog.String("url", url))
 
@@ -185,21 +189,48 @@ func sendJSONMetrics(url string, metric models.Metrics, log *slog.Logger) {
 	log.Debug("Metric info",
 		slog.String("metric", string(body)))
 
-	buf := bytes.NewBuffer(body)
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	defer gz.Close()
 
-	response, err := http.Post(url, ApplicationJSON, buf)
+	_, err = gz.Write(body)
+	if err != nil {
+		log.Error("Error write gzip",
+			slog.String("error", err.Error()))
+		return
+	}
+
+	err = gz.Flush()
+	if err != nil {
+		log.Error("Error flush gzip",
+			slog.String("error", err.Error()))
+		return
+	}
+
+	client := http.Client{}
+	request, err = http.NewRequest(http.MethodPost, url, &buf)
+	if err != nil {
+		log.Error("Error creating request",
+			slog.String("error", err.Error()))
+		return
+	}
+	request.Header.Set("Content-Encoding", "gzip")
+	request.Header.Set("Accept-Encoding", "gzip")
+	request.Header.Set("Content-Type", ApplicationJSON)
+
+	response, err = client.Do(request)
 	if err != nil {
 		log.Error("Error sending metrics",
 			slog.String("error", err.Error()))
 		return
 	}
-	log.Debug("Response received",
-		slog.String("Status code", strconv.Itoa(response.StatusCode)))
 	err = response.Body.Close()
 	if err != nil {
 		log.Error("Error closing response body",
 			slog.String("error", err.Error()))
 		return
 	}
-	log.Debug("Send JSON metric end")
+
+	log.Debug("Response received",
+		slog.String("Status code", strconv.Itoa(response.StatusCode)))
 }
