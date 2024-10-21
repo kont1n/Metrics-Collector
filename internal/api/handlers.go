@@ -291,13 +291,6 @@ func (h *Handler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) withJSON(w http.ResponseWriter, v any, status int, reqID string) {
 	h.loger.Debugln("withJSON util start")
 	var response []byte
-	/*
-		w.Header().Add("Content-Type", ApplicationJSON)
-		w.WriteHeader(status)
-		if err = json.NewEncoder(w).Encode(v); err != nil {
-			h.jsonError(w, "failed to encode", http.StatusInternalServerError, reqID)
-		}
-	*/
 	response, err = json.Marshal(v)
 	if err != nil {
 		h.jsonError(w, err.Error(), http.StatusInternalServerError, reqID)
