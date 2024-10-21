@@ -63,8 +63,10 @@ func (a *Agent) Poll() {
 		runtimeMetrics := collectedGauges()
 		runtimeMetrics["RandomValue"] = rand.Float64()
 		a.Metrics = runtimeMetrics
+		a.log.Debug("Metrics collected",
+			slog.Int64("PollCount", a.PollCount),
+			slog.Any("metrics", a.Metrics))
 		a.mu.Unlock()
-		a.log.Debug("Collect end")
 	}
 }
 
@@ -114,34 +116,37 @@ func (a *Agent) ReportJSON() {
 }
 
 func collectedGauges() map[string]float64 {
-	var m runtime.MemStats
+	var rtm runtime.MemStats
 	metrics := make(map[string]float64)
+	runtime.ReadMemStats(&rtm)
 
-	metrics["Alloc"] = float64(m.Alloc)
-	metrics["BuckHashSys"] = float64(m.BuckHashSys)
-	metrics["Frees"] = float64(m.Frees)
-	metrics["GCCPUFraction"] = m.GCCPUFraction
-	metrics["GCSys"] = float64(m.GCSys)
-	metrics["HeapAlloc"] = float64(m.HeapAlloc)
-	metrics["HeapIdle"] = float64(m.HeapIdle)
-	metrics["HeapInuse"] = float64(m.HeapInuse)
-	metrics["HeapObjects"] = float64(m.HeapObjects)
-	metrics["HeapReleased"] = float64(m.HeapReleased)
-	metrics["HeapSys"] = float64(m.HeapSys)
-	metrics["LastGC"] = float64(m.LastGC)
-	metrics["Lookups"] = float64(m.Lookups)
-	metrics["MCacheInuse"] = float64(m.MCacheInuse)
-	metrics["MCacheSys"] = float64(m.MCacheSys)
-	metrics["MSpanInuse"] = float64(m.MSpanInuse)
-	metrics["MSpanSys"] = float64(m.MSpanSys)
-	metrics["Mallocs"] = float64(m.Mallocs)
-	metrics["NextGC"] = float64(m.NextGC)
-	metrics["OtherSys"] = float64(m.OtherSys)
-	metrics["PauseTotalNs"] = float64(m.PauseTotalNs)
-	metrics["StackInuse"] = float64(m.StackInuse)
-	metrics["StackSys"] = float64(m.StackSys)
-	metrics["Sys"] = float64(m.Sys)
-	metrics["TotalAlloc"] = float64(m.TotalAlloc)
+	metrics["Alloc"] = float64(rtm.Alloc)
+	metrics["BuckHashSys"] = float64(rtm.BuckHashSys)
+	metrics["Frees"] = float64(rtm.Frees)
+	metrics["GCCPUFraction"] = rtm.GCCPUFraction
+	metrics["GCSys"] = float64(rtm.GCSys)
+	metrics["HeapAlloc"] = float64(rtm.HeapAlloc)
+	metrics["HeapIdle"] = float64(rtm.HeapIdle)
+	metrics["HeapInuse"] = float64(rtm.HeapInuse)
+	metrics["HeapObjects"] = float64(rtm.HeapObjects)
+	metrics["HeapReleased"] = float64(rtm.HeapReleased)
+	metrics["HeapSys"] = float64(rtm.HeapSys)
+	metrics["LastGC"] = float64(rtm.LastGC)
+	metrics["Lookups"] = float64(rtm.Lookups)
+	metrics["MCacheInuse"] = float64(rtm.MCacheInuse)
+	metrics["MCacheSys"] = float64(rtm.MCacheSys)
+	metrics["MSpanInuse"] = float64(rtm.MSpanInuse)
+	metrics["MSpanSys"] = float64(rtm.MSpanSys)
+	metrics["Mallocs"] = float64(rtm.Mallocs)
+	metrics["NextGC"] = float64(rtm.NextGC)
+	metrics["NumGC"] = float64(rtm.NumGC)
+	metrics["NumForcedGC"] = float64(rtm.NumForcedGC)
+	metrics["OtherSys"] = float64(rtm.OtherSys)
+	metrics["PauseTotalNs"] = float64(rtm.PauseTotalNs)
+	metrics["StackInuse"] = float64(rtm.StackInuse)
+	metrics["StackSys"] = float64(rtm.StackSys)
+	metrics["Sys"] = float64(rtm.Sys)
+	metrics["TotalAlloc"] = float64(rtm.TotalAlloc)
 
 	return metrics
 }
