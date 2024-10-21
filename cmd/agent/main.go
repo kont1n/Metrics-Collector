@@ -1,16 +1,31 @@
 package main
 
 import (
-	"fmt"
+	"log/slog"
+	"os"
 
 	"Metrics-Collector/internal/collector"
 	"Metrics-Collector/internal/config"
 )
 
-func main() {
-	address, pollInterval, reportInterval := config.ParseAgentConfig()
-	fmt.Println("Agent started. Sending metrics to", address)
+var log *slog.Logger
 
-	agent := collector.NewAgent(address, pollInterval, reportInterval)
+func init() {
+	// Подключение логирования
+	log = slog.New(
+		slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelInfo,
+		}))
+}
+
+func main() {
+
+	address, pollInterval, reportInterval := config.ParseAgentConfig(log)
+
+	log.Info("Agent started",
+		slog.String("Sending metrics to", address),
+	)
+
+	agent := collector.NewAgent(address, pollInterval, reportInterval, log)
 	agent.Run()
 }

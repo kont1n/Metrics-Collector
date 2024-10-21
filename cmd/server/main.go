@@ -1,33 +1,44 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-
-	"Metrics-Collector/internal/config"
-	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
+	"log"
 
 	"Metrics-Collector/internal/api"
+	"Metrics-Collector/internal/service"
 	"Metrics-Collector/internal/storage"
 )
 
 var (
-	err error
+	err     error
+	logger  *zap.Logger
+	store   *storage.Store
+	srv     *service.Service
+	handler *api.Handler
 )
 
-func main() {
-	host := config.ParseServerConfig()
-
-	store := storage.NewMemStorage()
-
-	router := chi.NewRouter()
-	router.Post("/update/{type}/{metric}/{value}", api.PostMetric(store))
-	router.Get("/value/{type}/{metric}", api.GetMetrics(store))
-	router.Get("/", api.IndexHandler(store))
-
-	fmt.Printf("Server started on %s\n", host)
-	if err = http.ListenAndServe(host, router); err != nil {
-		fmt.Println("Web server error:", err.Error())
+func init() {
+	// Подключение логирования
+	logCfg := zap.NewDevelopmentConfig()
+	logCfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	logger, err = logCfg.Build()
+	if err != nil {
+		log.Fatal("Failed to build logger:", err.Error())
 		return
 	}
+	defer logger.Sync()
+
+	logger.Info("Initializing success")
+}
+
+func main() {
+	sugar := logger.Sugar()
+
+	store = storage.NewStore(sugar)
+	srv = service.NewService(store, sugar)
+	handler = api.NewHandler(srv, sugar)
+
+	sugar.Infof("Application started")
+	api.Run(handler, sugar)
+	sugar.Infof("Application shutdown")
 }
