@@ -11,6 +11,7 @@ func (h *Handler) InitRoutes() *chi.Mux {
 
 	router.Use(middleware.RequestID)
 	router.Use(h.LogAPI)
+	router.Use(middleware.Compress(5, "gzip"))
 
 	router.Route("/update", func(r chi.Router) {
 		r.Post("/", h.postJSONMetric)
