@@ -39,8 +39,9 @@ func (h *Handler) LogAPI(handler http.Handler) http.Handler {
 }
 
 func (h *Handler) gzipMiddleware(handler http.Handler) http.Handler {
-	h.loger.Debugln("gzipMiddleware")
-	gzipFn := func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.loger.Debugln("gzipMiddleware")
+
 		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
 		// который будем передавать следующей функции
 		ow := w
@@ -75,6 +76,5 @@ func (h *Handler) gzipMiddleware(handler http.Handler) http.Handler {
 
 		// передаём управление хендлеру
 		handler.ServeHTTP(ow, r)
-	}
-	return http.HandlerFunc(gzipFn)
+	})
 }

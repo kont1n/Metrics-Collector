@@ -14,7 +14,7 @@ func init() {
 	// Подключение логирования
 	log = slog.New(
 		slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelInfo,
+			Level: slog.LevelDebug,
 		}))
 }
 

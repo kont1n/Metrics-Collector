@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -78,6 +77,7 @@ func (h *Handler) postMetric(w http.ResponseWriter, r *http.Request) {
 		err = h.service.SetGauge(metricName, value)
 		if err != nil {
 			w.Header().Set("Content-Type", TextPlain)
+			h.loger.Error("SetGauge error: ", err.Error())
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -95,6 +95,7 @@ func (h *Handler) postMetric(w http.ResponseWriter, r *http.Request) {
 		err = h.service.SetCounter(metricName, value)
 		if err != nil {
 			w.Header().Set("Content-Type", TextPlain)
+			h.loger.Error("SetCounter error: ", err.Error())
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -147,7 +148,8 @@ func (h *Handler) getMetric(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write([]byte(answer))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.loger.Error("Write error: ", err.Error())
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	h.loger.Debugln("GetMetrics handler end")
@@ -182,7 +184,8 @@ func (h *Handler) indexHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if _, err = w.Write([]byte(htmlString)); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.loger.Error("Write error: ", err.Error())
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	h.loger.Debugln("Index handler end")
@@ -193,18 +196,11 @@ func (h *Handler) postJSONMetric(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("PostJSONMetric handler start")
 
 	var metric models.Metrics
-	var buf bytes.Buffer
 	reqID := middleware.GetReqID(r.Context())
 
-	_, err = buf.ReadFrom(r.Body)
+	err = json.NewDecoder(r.Body).Decode(&metric)
 	if err != nil {
-		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
-		return
-	}
-
-	h.loger.Debugln("Request body:", buf.String())
-
-	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
+		h.loger.Error("Decode error: ", err.Error())
 		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
 		return
 	}
@@ -214,6 +210,7 @@ func (h *Handler) postJSONMetric(w http.ResponseWriter, r *http.Request) {
 
 		err = h.service.SetGauge(metric.ID, *metric.Value)
 		if err != nil {
+			h.loger.Error("SetGauge error: ", err.Error())
 			h.jsonError(w, "internal server error", http.StatusInternalServerError, reqID)
 			return
 		}
@@ -222,12 +219,14 @@ func (h *Handler) postJSONMetric(w http.ResponseWriter, r *http.Request) {
 
 		err = h.service.SetCounter(metric.ID, *metric.Delta)
 		if err != nil {
+			h.loger.Error("SetCounter error: ", err.Error())
 			h.jsonError(w, "internal server error", http.StatusInternalServerError, reqID)
 			return
 		}
 
 	default:
 
+		h.loger.Error("Incorrect metric type: ", metric.MType)
 		h.jsonError(w, "incorrect metric type", http.StatusBadRequest, reqID)
 		return
 	}
@@ -241,18 +240,11 @@ func (h *Handler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
 	h.loger.Debugln("GetJSONMetric handler start")
 
 	var metric models.Metrics
-	var buf bytes.Buffer
 	reqID := middleware.GetReqID(r.Context())
 
-	_, err = buf.ReadFrom(r.Body)
+	err = json.NewDecoder(r.Body).Decode(&metric)
 	if err != nil {
-		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
-		return
-	}
-
-	h.loger.Debugln("Request body:", buf.String())
-
-	if err = json.Unmarshal(buf.Bytes(), &metric); err != nil {
+		h.loger.Error("Decode error: ", err.Error())
 		h.jsonError(w, err.Error(), http.StatusBadRequest, reqID)
 		return
 	}
@@ -262,7 +254,7 @@ func (h *Handler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
 
 		value, exists := h.service.GetGauge(metric.ID)
 		if !exists {
-			h.loger.Debugln("GetJSONMetric gauge not found")
+			h.loger.Warn("Gauge : ", metric.ID, " not found")
 			h.jsonError(w, "unknown metric", http.StatusNotFound, reqID)
 			return
 		}
@@ -272,6 +264,7 @@ func (h *Handler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
 
 		value, exists := h.service.GetCounter(metric.ID)
 		if !exists {
+			h.loger.Warn("Counter : ", metric.ID, " not found")
 			h.jsonError(w, "unknown metric", http.StatusNotFound, reqID)
 			return
 		}
@@ -279,6 +272,7 @@ func (h *Handler) getJSONMetric(w http.ResponseWriter, r *http.Request) {
 
 	default:
 
+		h.loger.Error("Incorrect metric type: ", metric.MType)
 		h.jsonError(w, "incorrect metric type", http.StatusBadRequest, reqID)
 		return
 
@@ -293,14 +287,16 @@ func (h *Handler) withJSON(w http.ResponseWriter, v any, status int, reqID strin
 	var response []byte
 	response, err = json.Marshal(v)
 	if err != nil {
-		h.jsonError(w, err.Error(), http.StatusInternalServerError, reqID)
+		h.loger.Error("Marshal error: ", err.Error())
+		h.jsonError(w, "internal server error", http.StatusInternalServerError, reqID)
 		return
 	}
 	w.Header().Set("Content-Type", ApplicationJSON)
 	w.WriteHeader(status)
 	_, err = w.Write(response)
 	if err != nil {
-		h.jsonError(w, err.Error(), http.StatusInternalServerError, reqID)
+		h.loger.Error("Write error: ", err.Error())
+		h.jsonError(w, "internal server error", http.StatusInternalServerError, reqID)
 		return
 	}
 	h.loger.Debugln("withJSON util end")

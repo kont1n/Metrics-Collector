@@ -20,7 +20,7 @@ var (
 func init() {
 	// Подключение логирования
 	logCfg := zap.NewDevelopmentConfig()
-	logCfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	logCfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	logger, err = logCfg.Build()
 	if err != nil {
 		log.Fatal("Failed to build logger:", err.Error())
